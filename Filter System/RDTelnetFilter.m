@@ -74,6 +74,7 @@ enum ScanStates { scanNormal, scanIAC, scanWILL, scanWONT, scanDO, scanDONT, sca
     self = [super initWithWorld:world];
     if (self) {
         telnetSessionData = [[TelnetData alloc] init];
+        _rdTelnetPending = [NSMutableData new];
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(screenUpdated:) name:@"RDAtlantisMainScreenDidChangeNotification" object:[self world]];
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(worldConnected:) name:@"RDAtlantisConnectionDidConnectNotification" object:[self world]];
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(worldDisconnected:) name:@"RDAtlantisConnectionDidDisconnectNotification" object:[self world]];
@@ -91,6 +92,7 @@ enum ScanStates { scanNormal, scanIAC, scanWILL, scanWONT, scanDO, scanDONT, sca
         [_rdNopTimer release];
     }
     [telnetSessionData release];
+    [_rdTelnetPending release];
     [super dealloc];
 }
 
@@ -186,6 +188,7 @@ enum ScanStates { scanNormal, scanIAC, scanWILL, scanWONT, scanDO, scanDONT, sca
 - (void) worldConnected:(NSNotification *) notification
 {
     ttypeCycle = 0;
+    [_rdTelnetPending setLength:0];
     [telnetSessionData clear];
     int keepalive = [[[self world] preferenceForKey:@"atlantis.network.keepalive"] intValue];
     if ((keepalive == 1) || (keepalive == 2)) {
@@ -200,6 +203,7 @@ enum ScanStates { scanNormal, scanIAC, scanWILL, scanWONT, scanDO, scanDONT, sca
 
 - (void) worldDisconnected:(NSNotification *) notification
 {
+    [_rdTelnetPending setLength:0];
     if (_rdNopTimer) {
         [_rdNopTimer invalidate];
         [_rdNopTimer release];
@@ -451,7 +455,8 @@ const unsigned char * findCharInBlock(const unsigned char needle, const unsigned
         unsigned char tempchar = IAC;
         
         while (ptr && (ptr < endmark)) {
-            [finalData appendBytes:lastPtr length:(lastPtr - ptr)];
+            [finalData appendBytes:lastPtr length:(ptr - lastPtr)];
+            [finalData appendBytes:&tempchar length:1];
             [finalData appendBytes:&tempchar length:1];
             lastPtr = ptr + 1;
             if (ptr < endmark)
@@ -467,6 +472,11 @@ const unsigned char * findCharInBlock(const unsigned char needle, const unsigned
 {
     if ([object isKindOfClass:[NSMutableData class]]) 
     {
+        if ([_rdTelnetPending length]) {
+            NSMutableData *combined=[_rdTelnetPending mutableCopy];
+            [combined appendData:object]; [(NSMutableData *)object setData:combined];
+            [combined release]; [_rdTelnetPending setLength:0];
+        }
         unsigned char promptMark[] = { '\x1b', '[', '1', 'a', '\n' };
         const unsigned char *scandata = [object bytes];
         unsigned long length = [(NSData *)object length];
@@ -481,6 +491,7 @@ const unsigned char * findCharInBlock(const unsigned char needle, const unsigned
             
             const unsigned char *endmark = scandata + length;
             const unsigned char *lastMarker = NULL;
+            const unsigned char *unfinishedIAC = NULL;
             
             unsigned char subnegNumber = 0;
             int state = scanNormal;
@@ -495,6 +506,7 @@ const unsigned char * findCharInBlock(const unsigned char needle, const unsigned
                     {
                         lastMarker = ptr;
                         ptr = findCharInBlock(IAC,ptr,endmark - ptr);
+                        unfinishedIAC = ptr;
                         if (ptr) {
                             state = scanIAC;
                             if (ptr != lastMarker) {
@@ -584,7 +596,7 @@ const unsigned char * findCharInBlock(const unsigned char needle, const unsigned
                                 
                             case TQ_YES:
                                 telnetSessionData->remote[*ptr] = TQ_NO;
-                                [self sendState:DO forOption:*ptr];
+                                [self sendState:(*ptr == TELOPT_MXP ? DONT : DO) forOption:*ptr];
                                 state = scanNormal;
                                 break;
                                 
@@ -660,6 +672,7 @@ const unsigned char * findCharInBlock(const unsigned char needle, const unsigned
                         
                     case scanDONT:
                     {
+                        if (*ptr == TELOPT_MXP) [[NSNotificationCenter defaultCenter] postNotificationName:@"RDAtlantisMXPChanged" object:[self world] userInfo:@{@"enabled":@NO}];
                         switch (telnetSessionData->local[*ptr]) {
                             case TQ_NO:
                                 // For the sake of mutant implementations, we
@@ -719,6 +732,7 @@ const unsigned char * findCharInBlock(const unsigned char needle, const unsigned
                     {
                         if (*ptr == IAC) {
                             [subnegData appendBytes:ptr length:1];
+                            state = scanSBdata;
                         }
                         else if (*ptr == SE) {
                             if (subnegNumber == TELOPT_COMPRESS2) {
@@ -738,6 +752,10 @@ const unsigned char * findCharInBlock(const unsigned char needle, const unsigned
                 }
                 
                 ptr++;
+            }
+            // Reparse just the unfinished protocol command on the next packet.
+            if (state != scanNormal && unfinishedIAC && endmark-unfinishedIAC <= 16384) {
+                [_rdTelnetPending appendBytes:unfinishedIAC length:endmark-unfinishedIAC];
             }
             [(NSMutableData *)object setLength:0];
             [(NSMutableData *)object appendData:final];

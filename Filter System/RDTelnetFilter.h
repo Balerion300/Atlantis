@@ -31,6 +31,7 @@
     BOOL                mudProtocol;
     BOOL                mudPrompted;
     int                 ttypeCycle;
+    NSMutableData *     _rdTelnetPending;
 
 }
 

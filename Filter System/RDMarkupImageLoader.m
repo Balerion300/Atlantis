@@ -23,10 +23,16 @@
     NSURLSessionDataTask *task=[_session dataTaskWithURL:url];
     _requests[@(task.taskIdentifier)]=[NSMutableDictionary dictionaryWithDictionary:@{ @"data":[NSMutableData data], @"attachment":attachment, @"alternate":alternate, @"redirects":@0 }];
     [task resume];
+#ifdef RD_MARKUP_TEST
+    NSLog(@"Image task started: %lu",(unsigned long)task.taskIdentifier);
+#endif
     NSMutableAttributedString *text=[[[NSAttributedString attributedStringWithAttachment:attachment] mutableCopy] autorelease];
     [text addAttribute:NSToolTipAttributeName value:alternate range:NSMakeRange(0,text.length)]; return text;
 }
 - (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)task didReceiveResponse:(NSURLResponse *)response completionHandler:(void (^)(NSURLSessionResponseDisposition))completion {
+#ifdef RD_MARKUP_TEST
+    NSLog(@"Image response received: %lu",(unsigned long)task.taskIdentifier);
+#endif
     BOOL valid=_requests[@(task.taskIdentifier)]!=nil && [response isKindOfClass:NSHTTPURLResponse.class] && [(NSHTTPURLResponse *)response statusCode]==200 && response.expectedContentLength<=2*1024*1024;
     // ImageIO verifies actual format; tolerate mislabelled game-image servers.
     completion(valid?NSURLSessionResponseAllow:NSURLSessionResponseCancel);
@@ -42,6 +48,9 @@
     [buffer appendData:data];
 }
 - (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task didCompleteWithError:(NSError *)error {
+#ifdef RD_MARKUP_TEST
+    NSLog(@"Image completed: %lu error domain=%@ code=%ld",(unsigned long)task.taskIdentifier,error.domain,(long)error.code);
+#endif
     NSDictionary *state=[[_requests[@(task.taskIdentifier)] retain] autorelease];
     if (!state) return;
     NSTextAttachment *attachment=state[@"attachment"];

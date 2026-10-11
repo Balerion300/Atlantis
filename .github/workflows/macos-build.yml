@@ -25,10 +25,15 @@ jobs:
           python3 Atlantis/Tests/image_fixture.py &
           fixture=$!
           trap 'kill "$fixture" 2>/dev/null || true' EXIT
-          clang -fblocks -framework Cocoa -framework ImageIO -I"Atlantis/Filter System" \
+          curl --fail --silent --output /tmp/markup-fixture.png http://127.0.0.1:8935/image.png
+          clang -fblocks -DRD_MARKUP_TEST -framework Cocoa -framework ImageIO -I"Atlantis/Filter System" \
             Atlantis/Tests/MarkupTests.m "Atlantis/Filter System/RDMarkupParser.m" \
             "Atlantis/Filter System/RDMarkupImageLoader.m" -o markup-tests
           ./markup-tests | tee markup-tests.log
+          clang -fblocks -framework Cocoa -IAtlantis/Tests/Stubs -I"Atlantis/Filter System" \
+            Atlantis/Tests/TelnetTests.m "Atlantis/Filter System/RDAtlantisFilter.m" \
+            "Atlantis/Filter System/RDTelnetFilter.m" -o telnet-tests
+          ./telnet-tests | tee telnet-tests.log
       - name: Build app without developer credentials
         shell: bash
         run: |
@@ -58,5 +63,6 @@ jobs:
             artifacts/*
             build.log
             markup-tests.log
+            telnet-tests.log
           if-no-files-found: error
           retention-days: 30
