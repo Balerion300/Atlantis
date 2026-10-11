@@ -54,6 +54,13 @@ int main(void) {
         Check([[p consume:Text(@"\033[7z<b>literal</b>\n<b>also literal</b>\033[3z<b>ok</b>")].string isEqualToString:@"<b>literal</b>\n<b>also literal</b>ok"],@"locked default and reset");
         out=[p consume:Text(@"<u>one\ntwo")]; Check([out attribute:NSUnderlineStyleAttributeName atIndex:4 effectiveRange:NULL]==nil,@"open tags close on newline");
         [p consume:Text(@"\033[1z<version><support>\n")]; Check(d->replies.count==3,@"MXP version and supported subset replies");
+        [p consume:Text(@"\033[1z<support send.href send.prompt element>\n")];
+        Check([d->replies.lastObject containsString:@"+send.href -send.prompt -element"],@"unsupported attributes reported truthfully");
+        count=d->commands.count;
+        out=[p consume:Text(@"\033[1z<send href='look' prompt>Room</send><send href='one|two'>Menu</send>\n")];
+        Check(d->commands.count==count && [out attribute:NSLinkAttributeName atIndex:0 effectiveRange:NULL]==nil,@"unsupported SEND variants never send a different command");
+        [p consume:Text(@"\033[4z ordinary text <send href='look'>Room</send>\n")];
+        Check(d->commands.count==count,@"temporary secure mode must immediately precede tag");
         Check([[p consume:Text(@"\033[1z<image fname='a.png' url='https://example.com/' alt='Rock'>\n")].string isEqualToString:@"[Rock]\n"] && d->images==2,@"MXP image base URL");
         NSMutableString *huge=[NSMutableString stringWithString:@"<"]; for (int i=0;i<4200;i++) [huge appendString:@"x"];
         Check([p consume:Text(huge)].length>=4096,@"unterminated token bounded");

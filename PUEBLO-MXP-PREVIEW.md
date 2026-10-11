@@ -26,8 +26,8 @@ being reused in a different connection.
   temporary secure and persistent default modes. Secure command/image tags are
   rejected in open lines. Open formatting closes at newline.
 - MXP `SEND HREF`, `A HREF`, `IMAGE FNAME URL`, basic formatting,
-  version and supported-subset replies. Multi-command SEND uses the first
-  explicit command; no popup menu yet.
+  version and supported-subset replies, including attribute queries. SEND
+  menus, PROMPT and text-derived commands remain ordinary text in this preview.
 - Fragmented markup, a 4 KiB token limit, 64-level nesting and 4096 command links
   per connection. No browser engine or automatic script execution.
 - Asynchronous HTTP/HTTPS images: up to 16 pending requests, 2 MiB compressed

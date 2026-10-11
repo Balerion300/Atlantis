@@ -22,8 +22,6 @@
 - (NSURL *)markupCommand:(NSString *)command {
     id setting=[[self world] preferenceForKey:@"atlantis.markup.commands"];
     if ((setting && ![setting boolValue]) || !command.length || command.length>4000 || [command rangeOfCharacterFromSet:NSCharacterSet.controlCharacterSet].location!=NSNotFound || _commands.count>=4096) return nil;
-    // Multi-command MXP menus are not supported: keep their first explicit command.
-    command=[command componentsSeparatedByString:@"|"][0];
     NSString *key=NSUUID.UUID.UUIDString; _commands[key]=command;
     return [NSURL URLWithString:[@"atlantis-command:" stringByAppendingString:key]];
 }

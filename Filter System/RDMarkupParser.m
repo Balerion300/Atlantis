@@ -138,7 +138,7 @@ static NSDictionary *RDTag(NSString *token) {
     BOOL format=[@[@"b",@"strong",@"i",@"em",@"u",@"s",@"strike",@"del",@"font",@"color",@"c",@"pre"] containsObject:tag];
     BOOL block=[@[@"p",@"div"] containsObject:tag];
     BOOL link=[@[@"a",@"send"] containsObject:tag];
-    if (mxp && !secure && (link || [tag isEqualToString:@"image"] || [tag hasPrefix:@"!"] || [@[@"version",@"support"] containsObject:tag])) return NO;
+    if (mxp && !secure && !format) return NO;
     if (closing) {
         for (NSInteger i=(NSInteger)_stack.count-1;i>=0;i--) if ([_stack[i][@"tag"] isEqualToString:tag]) {
             NSDictionary *frame=_stack[i]; [_style setDictionary:frame[@"style"]]; _hidden=[frame[@"hidden"] unsignedIntegerValue]; _pre=[frame[@"pre"] unsignedIntegerValue]; [_stack removeObjectsInRange:NSMakeRange(i,_stack.count-i)]; break;
@@ -163,8 +163,12 @@ static NSDictionary *RDTag(NSString *token) {
         if (color) _style[NSForegroundColorAttributeName]=color;
         if (bg) _style[NSBackgroundColorAttributeName]=bg;
     } else if (link) {
+        [_style removeObjectForKey:NSLinkAttributeName]; [_style removeObjectForKey:NSToolTipAttributeName]; [_style removeObjectForKey:NSCursorAttributeName];
         NSString *command=[tag isEqualToString:@"send"] ? (a[@"href"] ?: first) : a[@"xch_cmd"];
-        NSURL *url=command ? [_delegate markupCommand:command] : [RDMarkupParser safeURL:a[@"href"] ?: first];
+        BOOL prompt=a[@"prompt"]!=nil;
+        for (NSString *arg in pos) if ([arg.lowercaseString isEqualToString:@"prompt"]) prompt=YES;
+        if (mxp && (prompt || [command containsString:@"|"] || [command containsString:@"&text;"])) command=nil;
+        NSURL *url=command ? [_delegate markupCommand:command] : ([tag isEqualToString:@"send"] ? nil : [RDMarkupParser safeURL:a[@"href"] ?: first]);
         if (url) { _style[NSLinkAttributeName]=url; _style[NSCursorAttributeName]=[NSCursor pointingHandCursor]; _style[NSToolTipAttributeName]=a[@"xch_hint"] ?: a[@"hint"] ?: a[@"title"] ?: (command ? @"Click to send this game command" : url.absoluteString); }
     } else if ([tag isEqualToString:@"img"] || [tag isEqualToString:@"image"]) {
         NSString *src=a[@"src"] ?: a[@"fname"] ?: first;
@@ -175,7 +179,21 @@ static NSDictionary *RDTag(NSString *token) {
     else if ([tag isEqualToString:@"pre"]) _pre++;
     else if (block) [self emit:[[[NSAttributedString alloc] initWithString:@"\n" attributes:base] autorelease] to:out];
     else if (mxp && [tag isEqualToString:@"version"]) [_delegate markupReply:@"\033[1z<VERSION MXP=1.0 CLIENT=Atlantis VERSION=0.9.9-Pueblo-MXP>\n"];
-    else if (mxp && [tag isEqualToString:@"support"]) [_delegate markupReply:@"\033[1z<SUPPORTS +B +I +U +S +FONT +COLOR +BR +P +A +SEND +IMAGE -ELEMENT -ENTITY -FRAME -SCRIPT>\n"];
+    else if (mxp && [tag isEqualToString:@"support"]) {
+        NSArray *supported=@[@"b",@"i",@"u",@"s",@"font",@"font.color",@"font.back",@"color",@"color.fore",@"color.back",@"br",@"p",@"a",@"a.href",@"send",@"send.href",@"send.hint",@"image",@"image.fname",@"image.url",@"version",@"support"];
+        NSMutableArray *answers=[NSMutableArray array];
+        NSArray *queries=pos.count ? pos : @[@"b",@"i",@"u",@"s",@"font",@"color",@"br",@"p",@"a",@"send",@"image",@"version",@"support"];
+        NSCharacterSet *invalid=[[NSCharacterSet characterSetWithCharactersInString:@"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.*"] invertedSet];
+        for (NSString *q in queries) {
+            if (answers.count>=64 || !q.length || q.length>64 || [q rangeOfCharacterFromSet:invalid].location!=NSNotFound) continue;
+            if ([q hasSuffix:@".*"]) {
+                NSString *prefix=[q.lowercaseString substringToIndex:q.length-1]; BOOL any=NO;
+                for (NSString *item in supported) if ([item hasPrefix:prefix]) { [answers addObject:[@"+" stringByAppendingString:item]]; any=YES; }
+                if (!any) [answers addObject:[@"-" stringByAppendingString:q]];
+            } else [answers addObject:[NSString stringWithFormat:@"%@%@",[supported containsObject:q.lowercaseString]?@"+":@"-",q]];
+        }
+        [_delegate markupReply:[NSString stringWithFormat:@"\033[1z<SUPPORTS %@>\n",[answers componentsJoinedByString:@" "]]];
+    }
     // Unknown tags have no side effects. Declarations and scripts are unsupported.
     return YES;
 }
@@ -191,6 +209,7 @@ static NSDictionary *RDTag(NSString *token) {
     NSUInteger i=0;
     while (i<s.length) {
         unichar c=[s characterAtIndex:i]; NSDictionary *base=[source attributesAtIndex:i effectiveRange:NULL];
+        if (_temporarySecure && c!='<') _temporarySecure=NO;
         if (c==27 && _mxpEnabled && !_puebloActive && i+1<s.length && [s characterAtIndex:i+1]=='[') {
             NSUInteger j=i+2; while (j<s.length && [s characterAtIndex:j]>='0' && [s characterAtIndex:j]<='9') j++;
             if (j<s.length && [s characterAtIndex:j]=='z') {
