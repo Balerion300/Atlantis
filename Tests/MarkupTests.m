@@ -8,6 +8,7 @@ static NSAttributedString *Text(NSString *s) { return [[[NSAttributedString allo
 @interface TestDelegate : NSObject <RDMarkupDelegate,RDMarkupImageDelegate> {
 @public NSMutableArray *replies, *commands; NSUInteger images, changed;
 }
+- (void)stopRunLoop;
 @end
 @implementation TestDelegate
 - (id)init { if ((self=[super init])) { replies=[NSMutableArray new]; commands=[NSMutableArray new]; } return self; }
@@ -15,12 +16,17 @@ static NSAttributedString *Text(NSString *s) { return [[[NSAttributedString allo
 - (void)markupReply:(NSString *)reply { [replies addObject:reply]; }
 - (NSURL *)markupCommand:(NSString *)command { [commands addObject:command]; return [NSURL URLWithString:@"atlantis-command:test"]; }
 - (NSAttributedString *)markupImage:(NSURL *)url alternate:(NSString *)alternate { if (url) images++; return Text([NSString stringWithFormat:@"[%@]",alternate]); }
-- (void)markupAttachmentChanged:(NSTextAttachment *)attachment { changed++; }
+- (void)stopRunLoop {
+    [NSApp stop:nil];
+    [NSApp postEvent:[NSEvent otherEventWithType:NSEventTypeApplicationDefined location:NSZeroPoint modifierFlags:0 timestamp:0 windowNumber:0 context:nil subtype:0 data1:0 data2:0] atStart:NO];
+}
+- (void)markupAttachmentChanged:(NSTextAttachment *)attachment { changed++; [self stopRunLoop]; }
 @end
 
 int main(void) {
     @autoreleasepool {
         [NSApplication sharedApplication];
+        [NSApp finishLaunching];
         TestDelegate *d=[TestDelegate new]; RDMarkupParser *p=[RDMarkupParser new]; p.delegate=d;
         Check([[p consume:Text(@"<b>literal</b>\n")].string isEqualToString:@"<b>literal</b>\n"],@"disabled plain Telnet");
         [p configurePueblo:YES mxp:NO];
@@ -55,8 +61,8 @@ int main(void) {
         RDMarkupImageLoader *loader=[RDMarkupImageLoader new]; loader.delegate=d;
         NSAttributedString *image=[loader image:[NSURL URLWithString:@"http://127.0.0.1:8935/image.png"] alternate:@"Fixture"];
         NSTextAttachment *attachment=[image attribute:NSAttachmentAttributeName atIndex:0 effectiveRange:NULL];
-        NSDate *deadline=[NSDate dateWithTimeIntervalSinceNow:8];
-        while (!d->changed && deadline.timeIntervalSinceNow>0) [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.01]];
+        NSTimer *timeout=[NSTimer scheduledTimerWithTimeInterval:8 target:d selector:@selector(stopRunLoop) userInfo:nil repeats:NO];
+        [NSApp run]; [timeout invalidate];
         if (d->changed!=1 || ![(NSCell *)attachment.attachmentCell image]) NSLog(@"Image fixture: callbacks=%lu cell=%@",(unsigned long)d->changed,[(NSCell *)attachment.attachmentCell stringValue]);
         Check(d->changed==1 && [(NSCell *)attachment.attachmentCell image]!=nil,@"asynchronous inline image attachment load");
         [loader shutdown]; [loader release]; p.delegate=nil; [p release]; [d release];
