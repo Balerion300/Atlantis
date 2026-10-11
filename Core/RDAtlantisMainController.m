@@ -370,9 +370,10 @@ static void networkReachabilityChangedCallback(SCNetworkReachabilityRef target, 
     [self addInputFilter:[RDTelnetFilter class]];
     [self addInputFilter:[RDMultibyteFilter class]];
     [self addInputFilter:[RDMCPFilter class]];
-    [self addInputFilter:[RDMarkupFilter class]];
     [self addInputFilter:[RDURLFilter class]];
     [self addInputFilter:[RDEmailFilter class]];
+    // Explicit game links take precedence over inferred URLs in their captions.
+    [self addInputFilter:[RDMarkupFilter class]];
 
     [self addLogfileType:[RDPlainText class]];
     [self addLogfileType:[RDFormattedText class]];
