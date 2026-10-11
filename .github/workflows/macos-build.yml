@@ -25,7 +25,7 @@ jobs:
           python3 Atlantis/Tests/image_fixture.py &
           fixture=$!
           trap 'kill "$fixture" 2>/dev/null || true' EXIT
-          curl --fail --silent --output /tmp/markup-fixture.png http://127.0.0.1:8935/image.png
+          curl --fail --silent --retry 3 --retry-connrefused --retry-delay 1 --output /tmp/markup-fixture.png http://127.0.0.1:8935/image.png
           clang -fblocks -DRD_MARKUP_TEST -framework Cocoa -framework ImageIO -I"Atlantis/Filter System" \
             Atlantis/Tests/MarkupTests.m "Atlantis/Filter System/RDMarkupParser.m" \
             "Atlantis/Filter System/RDMarkupImageLoader.m" -o markup-tests
