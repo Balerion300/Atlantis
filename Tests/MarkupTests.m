@@ -23,6 +23,23 @@ static NSAttributedString *Text(NSString *s) { return [[[NSAttributedString allo
 - (void)markupAttachmentChanged:(NSTextAttachment *)attachment { changed++; [self stopRunLoop]; }
 @end
 
+static void CheckPuebloSplits(TestDelegate *delegate,NSString *sample,NSString *expected,NSString *name) {
+    RDMarkupParser *parser=[RDMarkupParser new]; parser.delegate=delegate;
+    [parser configurePueblo:YES mxp:NO]; BOOL valid=YES;
+    for (NSUInteger split=0;split<=sample.length;split++) {
+        [parser reset]; [parser consume:Text(@"<img xch_mode=purehtml>")];
+        NSMutableString *actual=[NSMutableString stringWithString:[parser consume:Text([sample substringToIndex:split])].string];
+        [actual appendString:[parser consume:Text([sample substringFromIndex:split])].string];
+        if (![actual isEqualToString:expected]) { NSLog(@"%@ split=%lu actual=%@",name,(unsigned long)split,actual); valid=NO; break; }
+    }
+    Check(valid,[name stringByAppendingString:@" at every network split"]);
+    [parser reset]; [parser consume:Text(@"<img xch_mode=purehtml>")];
+    NSMutableString *actual=[NSMutableString string];
+    for (NSUInteger i=0;i<sample.length;i++) [actual appendString:[parser consume:Text([sample substringWithRange:NSMakeRange(i,1)])].string];
+    Check([actual isEqualToString:expected],[name stringByAppendingString:@" byte by byte"]);
+    parser.delegate=nil; [parser release];
+}
+
 int main(void) {
     @autoreleasepool {
         [NSApplication sharedApplication];
@@ -65,6 +82,20 @@ int main(void) {
         NSMutableString *huge=[NSMutableString stringWithString:@"<"]; for (int i=0;i<4200;i++) [huge appendString:@"x"];
         Check([p consume:Text(huge)].length>=4096,@"unterminated token bounded");
         [p activateMXP:NO];
+        for (NSString *ending in @[@"\n",@"\r\n",@"\r"]) {
+            NSString *sample=[NSString stringWithFormat:@"<pre>Player Name   Loc #<BR>%@Jon           #4447<BR>%@Nerys         #4445<BR>%@</pre>",ending,ending,ending];
+            CheckPuebloSplits(d,sample,@"Player Name   Loc #\nJon           #4447\nNerys         #4445\n",@"Pueblo WHO line endings");
+        }
+        CheckPuebloSplits(d,@"<pre>A<BR>\n\nB<BR><BR>\nC\n\nD<BR>  E</pre>",@"A\n\nB\n\nC\n\nD\n  E\n",@"intentional PRE blank lines and column spaces");
+        CheckPuebloSplits(d,@"<div>Room<BR>\n</div><pre>    Description<BR>\n\n    Weather<BR>\n</pre>Contents:<BR>\nPlayer<BR>\n",@"Room\n    Description\n\n    Weather\nContents:\nPlayer\n",@"room paragraphs do not add redundant block breaks");
+        CheckPuebloSplits(d,@"<pre><a xch_cmd='look'><img src='https://example.com/a.png' alt='Castle'></a><BR>\nCaption<BR>\n</pre>",@"[Castle]\nCaption\n",@"inline image and caption spacing");
+        [p configurePueblo:YES mxp:NO]; [p consume:Text(@"<img xch_mode=purehtml><pre>A<BR>")];
+        [p reset]; [p consume:Text(@"<img xch_mode=purehtml>")];
+        Check([[p consume:Text(@"<pre>\nB</pre>")].string isEqualToString:@"\nB\n"],@"reconnect clears pending Pueblo wire ending");
+        [p consume:Text(@"<BR>")];
+        Check([[p consume:Text(@"<xch_mudtext>\nLiteral</xch_mudtext>")].string isEqualToString:@"\nLiteral"],@"mode switch preserves literal newline");
+        [p configurePueblo:NO mxp:YES]; [p activateMXP:YES];
+        Check([[p consume:Text(@"\033[1zOne<BR>\nTwo")].string isEqualToString:@"One\n\nTwo"],@"MXP raw newline semantics unchanged");
         RDMarkupImageLoader *loader=[RDMarkupImageLoader new]; loader.delegate=d;
         NSAttributedString *image=[loader image:[NSURL URLWithString:@"http://127.0.0.1:8935/image.png"] alternate:@"Fixture"];
         NSTextAttachment *attachment=[image attribute:NSAttachmentAttributeName atIndex:0 effectiveRange:NULL];

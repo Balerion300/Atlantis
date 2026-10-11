@@ -98,9 +98,9 @@ static NSDictionary *RDTag(NSString *token) {
 @synthesize delegate = _delegate;
 - (id)init { if ((self=[super init])) { _pending=[NSMutableAttributedString new]; _style=[NSMutableDictionary new]; _stack=[NSMutableArray new]; _greeting=[NSMutableString new]; } return self; }
 - (void)dealloc { [_pending release]; [_style release]; [_stack release]; [_greeting release]; [super dealloc]; }
-- (void)reset { [_pending setAttributedString:[[[NSAttributedString alloc] initWithString:@""] autorelease]]; [_style removeAllObjects]; [_stack removeAllObjects]; [_greeting setString:@""]; _puebloActive=_html=_mxpActive=_replied=_temporarySecure=NO; _mode=_defaultMode=0; _hidden=_pre=0; }
+- (void)reset { [_pending setAttributedString:[[[NSAttributedString alloc] initWithString:@""] autorelease]]; [_style removeAllObjects]; [_stack removeAllObjects]; [_greeting setString:@""]; _puebloActive=_html=_mxpActive=_replied=_temporarySecure=NO; _mode=_defaultMode=0; _hidden=_pre=_puebloBreakEnding=0; _hasOutput=NO; _lastCharacter=0; }
 - (void)configurePueblo:(BOOL)pueblo mxp:(BOOL)mxp { if (pueblo!=_puebloEnabled || mxp!=_mxpEnabled) [self reset]; _puebloEnabled=pueblo; _mxpEnabled=mxp; }
-- (void)activateMXP:(BOOL)enabled { _mxpActive=enabled && _mxpEnabled; _mode=_defaultMode=0; [_style removeAllObjects]; [_stack removeAllObjects]; _hidden=_pre=0; }
+- (void)activateMXP:(BOOL)enabled { _mxpActive=enabled && _mxpEnabled; _mode=_defaultMode=0; [_style removeAllObjects]; [_stack removeAllObjects]; _hidden=_pre=_puebloBreakEnding=0; }
 + (NSURL *)safeURL:(NSString *)value { if (!value || value.length>2048 || [value rangeOfCharacterFromSet:NSCharacterSet.controlCharacterSet].location!=NSNotFound) return nil; NSURL *url=[NSURL URLWithString:value]; if (!url.host.length || url.user.length || url.password.length) return nil; return ([@[@"http",@"https"] containsObject:url.scheme.lowercaseString]) ? url : nil; }
 - (void)emit:(NSAttributedString *)text to:(NSMutableAttributedString *)out {
     if (_hidden || !text.length) return;
@@ -116,6 +116,11 @@ static NSDictionary *RDTag(NSString *token) {
         }];
     }
     [out appendAttributedString:styled];
+    _hasOutput=YES; _lastCharacter=[styled.string characterAtIndex:styled.length-1];
+}
+- (void)blockBreak:(NSDictionary *)base output:(NSMutableAttributedString *)out {
+    if (_hasOutput && _lastCharacter!='\n' && _lastCharacter!='\r')
+        [self emit:[[[NSAttributedString alloc] initWithString:@"\n" attributes:base] autorelease] to:out];
 }
 - (void)closeOpenTags {
     // Secure tags persist. Open tags are always at the top until mode transition.
@@ -124,6 +129,7 @@ static NSDictionary *RDTag(NSString *token) {
     }
 }
 - (BOOL)tag:(NSDictionary *)a base:(NSDictionary *)base output:(NSMutableAttributedString *)out {
+    _puebloBreakEnding=0;
     NSString *tag=a[@"tag"]; BOOL closing=[a[@"closing"] boolValue];
     BOOL mxp=_mxpActive && !_puebloActive;
     BOOL secure=!mxp || _mode==1 || _temporarySecure;
@@ -143,7 +149,7 @@ static NSDictionary *RDTag(NSString *token) {
         for (NSInteger i=(NSInteger)_stack.count-1;i>=0;i--) if ([_stack[i][@"tag"] isEqualToString:tag]) {
             NSDictionary *frame=_stack[i]; [_style setDictionary:frame[@"style"]]; _hidden=[frame[@"hidden"] unsignedIntegerValue]; _pre=[frame[@"pre"] unsignedIntegerValue]; [_stack removeObjectsInRange:NSMakeRange(i,_stack.count-i)]; break;
         }
-        if (block || [tag isEqualToString:@"pre"]) [self emit:[[[NSAttributedString alloc] initWithString:@"\n" attributes:base] autorelease] to:out];
+        if (block || [tag isEqualToString:@"pre"]) [self blockBreak:base output:out];
         return YES;
     }
     if (dangerous || format || block || link) {
@@ -175,9 +181,14 @@ static NSDictionary *RDTag(NSString *token) {
         if (mxp && a[@"url"] && src) src=[[NSURL URLWithString:src relativeToURL:[RDMarkupParser safeURL:a[@"url"]]] absoluteString];
         NSAttributedString *image=[_delegate markupImage:[RDMarkupParser safeURL:src] alternate:a[@"alt"] ?: @"Image"];
         if (image) [self emit:image to:out];
-    } else if ([@[@"br",@"hr"] containsObject:tag]) [self emit:[[[NSAttributedString alloc] initWithString:[tag isEqualToString:@"hr"]?@"\n────────────────\n":@"\n" attributes:base] autorelease] to:out];
-    else if ([tag isEqualToString:@"pre"]) _pre++;
-    else if (block) [self emit:[[[NSAttributedString alloc] initWithString:@"\n" attributes:base] autorelease] to:out];
+    } else if ([@[@"br",@"hr"] containsObject:tag]) {
+        [self emit:[[[NSAttributedString alloc] initWithString:[tag isEqualToString:@"hr"]?@"\n────────────────\n":@"\n" attributes:base] autorelease] to:out];
+        // PennMUSH sends <BR> followed by a transport newline. This is one
+        // display break, even inside PRE; an additional newline remains visible.
+        if (_puebloActive && _html && [tag isEqualToString:@"br"]) _puebloBreakEnding=1;
+    }
+    else if ([tag isEqualToString:@"pre"]) { [self blockBreak:base output:out]; _pre++; }
+    else if (block) [self blockBreak:base output:out];
     else if (mxp && [tag isEqualToString:@"version"]) [_delegate markupReply:@"\033[1z<VERSION MXP=1.0 CLIENT=Atlantis VERSION=0.9.9-Pueblo-MXP>\n"];
     else if (mxp && [tag isEqualToString:@"support"]) {
         NSArray *supported=@[@"b",@"i",@"u",@"s",@"font",@"font.color",@"font.back",@"color",@"color.fore",@"color.back",@"br",@"p",@"a",@"a.href",@"send",@"send.href",@"send.hint",@"image",@"image.fname",@"image.url",@"version",@"support"];
@@ -209,6 +220,11 @@ static NSDictionary *RDTag(NSString *token) {
     NSUInteger i=0;
     while (i<s.length) {
         unichar c=[s characterAtIndex:i]; NSDictionary *base=[source attributesAtIndex:i effectiveRange:NULL];
+        if (_puebloBreakEnding) {
+            NSUInteger pending=_puebloBreakEnding; _puebloBreakEnding=0;
+            if (c=='\n') { i++; continue; }
+            if (pending==1 && c=='\r') { _puebloBreakEnding=2; i++; continue; }
+        }
         if (_temporarySecure && c!='<') _temporarySecure=NO;
         if (c==27 && _mxpEnabled && !_puebloActive && i+1<s.length && [s characterAtIndex:i+1]=='[') {
             NSUInteger j=i+2; while (j<s.length && [s characterAtIndex:j]>='0' && [s characterAtIndex:j]<='9') j++;

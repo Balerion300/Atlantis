@@ -18,6 +18,9 @@
     NSMutableArray *_stack;
     NSMutableString *_greeting;
     NSUInteger _hidden, _pre;
+    NSUInteger _puebloBreakEnding; // 1: optional wire ending, 2: optional LF after CR
+    BOOL _hasOutput;
+    unichar _lastCharacter;
 }
 @property(assign) id<RDMarkupDelegate> delegate;
 - (void) configurePueblo:(BOOL)pueblo mxp:(BOOL)mxp;

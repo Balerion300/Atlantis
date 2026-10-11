@@ -3,6 +3,12 @@
 This experimental branch extends jimcheng256's modernized Atlantis and uses the
 matching Lemuria fork. The baseline release remains available separately.
 
+The spacing update treats PennMUSH's paired `<BR>` and trailing wire newline
+as one display break, preserving intentional blank lines and fixed-width
+spacing. Closing preformatted blocks and paragraph tags no longer insert a
+redundant newline when the last output line already ended. Inline image loading
+and clickable links retain their existing behavior.
+
 ## Turn it on
 
 Open the Address Book, edit the world (or its character), and select **Pueblo and
