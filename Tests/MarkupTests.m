@@ -57,6 +57,7 @@ int main(void) {
         NSTextAttachment *attachment=[image attribute:NSAttachmentAttributeName atIndex:0 effectiveRange:NULL];
         NSDate *deadline=[NSDate dateWithTimeIntervalSinceNow:8];
         while (!d->changed && deadline.timeIntervalSinceNow>0) [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.01]];
+        if (d->changed!=1 || ![(NSCell *)attachment.attachmentCell image]) NSLog(@"Image fixture: callbacks=%lu cell=%@",(unsigned long)d->changed,[(NSCell *)attachment.attachmentCell stringValue]);
         Check(d->changed==1 && [(NSCell *)attachment.attachmentCell image]!=nil,@"asynchronous inline image attachment load");
         [loader shutdown]; [loader release]; p.delegate=nil; [p release]; [d release];
         printf("PASS: %lu focused markup checks\n",(unsigned long)checks);
