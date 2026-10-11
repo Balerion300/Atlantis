@@ -626,6 +626,12 @@ static NSMutableArray *s_extendedColors = nil;
 - (void) parseEscapeSequence:(NSString *)sequence result:(NSMutableAttributedString *) result
 {
     NSString *escTerminator = [sequence substringFromIndex:[sequence length] - 1];
+
+    // The display parser needs MXP line modes at their original text positions.
+    if ([escTerminator isEqualToString:@"z"] && [[[self world] preferenceForKey:@"atlantis.mxp.enabled"] boolValue]) {
+        [result appendAttributedString:[[[NSAttributedString alloc] initWithString:sequence attributes:[_rdState attributes]] autorelease]];
+        return;
+    }
     
     // ANSI color sequence
     if ([escTerminator isEqualToString:@"m"]) {

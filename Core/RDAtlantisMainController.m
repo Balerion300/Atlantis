@@ -23,6 +23,8 @@
 #import "RDURLFilter.h"
 #import "RDEmailFilter.h"
 #import "RDMCPFilter.h"
+#import "RDMarkupFilter.h"
+#import "WorldMarkupEditor.h"
 
 #import "RDFormattedText.h"
 #import "RDPlainText.h"
@@ -368,6 +370,7 @@ static void networkReachabilityChangedCallback(SCNetworkReachabilityRef target, 
     [self addInputFilter:[RDTelnetFilter class]];
     [self addInputFilter:[RDMultibyteFilter class]];
     [self addInputFilter:[RDMCPFilter class]];
+    [self addInputFilter:[RDMarkupFilter class]];
     [self addInputFilter:[RDURLFilter class]];
     [self addInputFilter:[RDEmailFilter class]];
 
@@ -479,6 +482,7 @@ static void networkReachabilityChangedCallback(SCNetworkReachabilityRef target, 
     [self addConfigTabClass:[WorldMainEditor class]];
     [self addConfigTabClass:[WorldInfoEditor class]];
     [self addConfigTabClass:[WorldFormattingEditor class]];
+    [self addConfigTabClass:[WorldMarkupEditor class]];
     [self addConfigTabClass:[WorldHighlightEditor class]];
     [self addConfigTabClass:[WorldSpawnEditor class]];
     [self addConfigTabClass:[WorldEventEditor class]];

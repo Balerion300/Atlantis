@@ -78,6 +78,7 @@
 - (NSString *) statusBarUserText;
 
 - (void) appendString:(NSAttributedString *) string;
+- (void) refreshMarkupAttachment:(NSTextAttachment *)attachment;
 - (void) appendStringNoTimestamp:(NSAttributedString *) string;
 - (void) ensureNewline;
 - (void) stringIntoInput:(NSString *) string;

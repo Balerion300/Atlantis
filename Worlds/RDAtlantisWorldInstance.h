@@ -122,6 +122,7 @@ typedef enum {
 - (void) sendData:(NSData *)data;
 - (void) sendDataRaw:(NSData *)data;
 - (void) sendString:(NSString *)string;
+- (BOOL) activateMarkupLink:(NSURL *)url;
 
 - (RDAtlantisSpawn *) mainSpawn;
 - (RDAtlantisSpawn *) spawnForPath:(NSString *)path withPreferences:(RDSpawnConfigRecord *)prefs;

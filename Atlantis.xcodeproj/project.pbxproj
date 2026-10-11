@@ -33,6 +33,11 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		DF62D00037125460FA47E9E2 /* RDMarkupParser.m in Sources */ = {isa = PBXBuildFile; fileRef = 3EA5CAF0EB43075C8DA99A25 /* RDMarkupParser.m */; };
+		DE9BCC177BCC5749BB7616E0 /* RDMarkupImageLoader.m in Sources */ = {isa = PBXBuildFile; fileRef = 88601689A95EBE80D264D890 /* RDMarkupImageLoader.m */; };
+		858097041301EFA3E6487B3C /* RDMarkupFilter.m in Sources */ = {isa = PBXBuildFile; fileRef = 70940A345967203FF22356B6 /* RDMarkupFilter.m */; };
+		D4A983C8B3F8BE5033482A0C /* WorldMarkupEditor.m in Sources */ = {isa = PBXBuildFile; fileRef = 612D0F58F31BB16E720ABE7A /* WorldMarkupEditor.m */; };
+		3041D2656963DE3ACD94979E /* ImageIO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4FEC8F2DCBDE9F023104BF11; };
 		3226D1272EE1537C0016D727 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3226D1262EE1537C0016D727 /* SwiftUI.framework */; };
 		5303ACB925413BF100565FBD /* ActionConf_SendText.xib in Resources */ = {isa = PBXBuildFile; fileRef = 5303ACB825413BF100565FBD /* ActionConf_SendText.xib */; };
 		5311D1882210FA390010AB9D /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5311D1872210FA390010AB9D /* AVFoundation.framework */; };
@@ -424,6 +429,15 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		1B21B836FD1B15300EFD164B /* RDMarkupParser.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Filter System/RDMarkupParser.h"; sourceTree = SOURCE_ROOT; };
+		3EA5CAF0EB43075C8DA99A25 /* RDMarkupParser.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.objc; path = "Filter System/RDMarkupParser.m"; sourceTree = SOURCE_ROOT; };
+		4F03BAF88BA6D25AF2BA629D /* RDMarkupImageLoader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Filter System/RDMarkupImageLoader.h"; sourceTree = SOURCE_ROOT; };
+		88601689A95EBE80D264D890 /* RDMarkupImageLoader.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.objc; path = "Filter System/RDMarkupImageLoader.m"; sourceTree = SOURCE_ROOT; };
+		DE84549BFBF35437A1035885 /* RDMarkupFilter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Filter System/RDMarkupFilter.h"; sourceTree = SOURCE_ROOT; };
+		70940A345967203FF22356B6 /* RDMarkupFilter.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.objc; path = "Filter System/RDMarkupFilter.m"; sourceTree = SOURCE_ROOT; };
+		947F8FBC15C3274AE4D6F4FB /* WorldMarkupEditor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Preferences/World/WorldMarkupEditor.h"; sourceTree = SOURCE_ROOT; };
+		612D0F58F31BB16E720ABE7A /* WorldMarkupEditor.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.objc; path = "Preferences/World/WorldMarkupEditor.m"; sourceTree = SOURCE_ROOT; };
+		4FEC8F2DCBDE9F023104BF11 /* ImageIO.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ImageIO.framework; path = System/Library/Frameworks/ImageIO.framework; sourceTree = SDKROOT; };
 		089C165DFE840E0CC02AAC07 /* English */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.strings; name = English; path = English.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = /System/Library/Frameworks/Cocoa.framework; sourceTree = "<absolute>"; };
 		13E42FB307B3F0F600E4EEF1 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = /System/Library/Frameworks/CoreData.framework; sourceTree = "<absolute>"; };
@@ -973,6 +987,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3041D2656963DE3ACD94979E /* ImageIO.framework in Frameworks */,
 				53613BC9234132D7005527FD /* Sparkle.framework in Frameworks */,
 				539862D022EE953E00ECB14D /* Lemuria.framework in Frameworks */,
 				5311D1882210FA390010AB9D /* AVFoundation.framework in Frameworks */,
@@ -1053,6 +1068,15 @@
 		29B97314FDCFA39411CA2CEA /* Atlantis */ = {
 			isa = PBXGroup;
 			children = (
+				1B21B836FD1B15300EFD164B /* RDMarkupParser.h */,
+				3EA5CAF0EB43075C8DA99A25 /* RDMarkupParser.m */,
+				4F03BAF88BA6D25AF2BA629D /* RDMarkupImageLoader.h */,
+				88601689A95EBE80D264D890 /* RDMarkupImageLoader.m */,
+				DE84549BFBF35437A1035885 /* RDMarkupFilter.h */,
+				70940A345967203FF22356B6 /* RDMarkupFilter.m */,
+				947F8FBC15C3274AE4D6F4FB /* WorldMarkupEditor.h */,
+				612D0F58F31BB16E720ABE7A /* WorldMarkupEditor.m */,
+				4FEC8F2DCBDE9F023104BF11 /* ImageIO.framework */,
 				53E193FC22110F4E00A0B0BE /* Lemuria.xcodeproj */,
 				FFFE64BE09A3D54B003F118B /* Documentation */,
 				080E96DDFE201D6D7F000001 /* Classes */,
@@ -2133,6 +2157,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DF62D00037125460FA47E9E2 /* RDMarkupParser.m in Sources */,
+				DE9BCC177BCC5749BB7616E0 /* RDMarkupImageLoader.m in Sources */,
+				858097041301EFA3E6487B3C /* RDMarkupFilter.m in Sources */,
+				D4A983C8B3F8BE5033482A0C /* WorldMarkupEditor.m in Sources */,
 				8D11072D0486CEB800E47090 /* main.m in Sources */,
 				FFFF6D280999E54E00E56390 /* RDAtlantisMainController.m in Sources */,
 				FF966ABC099A752E005886F4 /* RDAtlantisWorldPreferences.m in Sources */,

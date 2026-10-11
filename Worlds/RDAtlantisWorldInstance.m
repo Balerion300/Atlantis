@@ -11,6 +11,7 @@
 #import "RDAtlantisSpawn.h"
 #import "RDAtlantisApplication.h"
 #import "RDAnsiFilter.h"
+#import "RDMarkupFilter.h"
 #import "RDLogType.h"
 #import "RDSpawnConfigRecord.h"
 #import "RDAtlantisMainController.h"
@@ -1565,6 +1566,14 @@ static NSString *alphabet = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWX
 
     [self sendDataRaw:mutableData];
     [mutableData release];
+}
+
+- (BOOL) activateMarkupLink:(NSURL *)url
+{
+    for (RDMarkupFilter *filter in _rdInputFilters) {
+        if ([filter isKindOfClass:[RDMarkupFilter class]] && [filter activateLink:url]) return YES;
+    }
+    return NO;
 }
 
 - (void) sendString:(NSString *) string

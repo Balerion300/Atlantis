@@ -13,6 +13,7 @@
 #define TELOPT_CHARSET 42
 #define TELOPT_COMPRESS 85
 #define TELOPT_COMPRESS2 86
+#define TELOPT_MXP 91
 
 #define TELOPT_MSDP 69
 #define MSDP_VAR 1
@@ -102,6 +103,7 @@ enum ScanStates { scanNormal, scanIAC, scanWILL, scanWONT, scanDO, scanDONT, sca
 
 - (BOOL) prefersOption:(unsigned char)option
 {
+    if (option == TELOPT_MXP) return [[[self world] preferenceForKey:@"atlantis.mxp.enabled"] boolValue];
     switch(option) {
         case TELOPT_BINARY:
         case TELOPT_SGA:
@@ -234,6 +236,11 @@ enum ScanStates { scanNormal, scanIAC, scanWILL, scanWONT, scanDO, scanDONT, sca
 
 - (void) processSuboption:(unsigned char)option withData:(NSData *)data
 {
+    if (option == TELOPT_MXP) {
+        BOOL enabled = telnetSessionData->remote[TELOPT_MXP] == TQ_YES && [[[self world] preferenceForKey:@"atlantis.mxp.enabled"] boolValue];
+        [[NSNotificationCenter defaultCenter] postNotificationName:@"RDAtlantisMXPChanged" object:[self world] userInfo:@{@"enabled":@(enabled)}];
+        return;
+    }
     unsigned const char *tdata = [data bytes];
  
     switch (option) {
@@ -386,6 +393,7 @@ enum ScanStates { scanNormal, scanIAC, scanWILL, scanWONT, scanDO, scanDONT, sca
 
 - (BOOL) supportsOption:(unsigned char)option
 {
+    if (option == TELOPT_MXP) return [[[self world] preferenceForKey:@"atlantis.mxp.enabled"] boolValue];
     switch (option) {
         case TELOPT_BINARY:
         case TELOPT_SGA:
@@ -565,6 +573,9 @@ const unsigned char * findCharInBlock(const unsigned char needle, const unsigned
                         
                     case scanWONT:
                     {
+                        if (*ptr == TELOPT_MXP) {
+                            [[NSNotificationCenter defaultCenter] postNotificationName:@"RDAtlantisMXPChanged" object:[self world] userInfo:@{@"enabled":@NO}];
+                        }
                         switch (telnetSessionData->remote[*ptr]) {
                             case TQ_NO:
                                 //[self sendState:DONT forOption:*ptr];                            

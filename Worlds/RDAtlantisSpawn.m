@@ -131,6 +131,7 @@ static NSImage *s_statusLockGreyImage = nil;
             [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(statusBarSettingChanged:) name:@"RDAtlantisStatusBarDidChangeNotification" object:nil];
             
             [_rdOutputView setTooltipDelegate:self];
+            [_rdOutputView setDelegate:self];
 
             [self setStatusBarBottom:[[RDAtlantisMainController controller] statusBarBottom]];            
             
@@ -722,6 +723,29 @@ extern NSInteger compareViews(id view1, id view2, void *context);
     }
     else
         return nil;
+}
+
+- (BOOL)textView:(NSTextView *)view clickedOnLink:(id)link atIndex:(NSUInteger)index
+{
+    NSURL *url=[link isKindOfClass:[NSURL class]] ? link : [NSURL URLWithString:[link description]];
+    if ([url.scheme isEqualToString:@"atlantis-command"]) {
+        if (view == _rdOutputView) [_rdWorld activateMarkupLink:url];
+        return YES;
+    }
+    return NO; // Existing URL handling remains available.
+}
+
+- (void)refreshMarkupAttachment:(NSTextAttachment *)attachment
+{
+    [_rdOutputView commit];
+    NSTextStorage *storage=[_rdOutputView textStorage];
+    [storage enumerateAttribute:NSAttachmentAttributeName inRange:NSMakeRange(0,storage.length) options:0 usingBlock:^(id value,NSRange range,BOOL *stop) {
+        if (value == attachment) {
+            [[_rdOutputView layoutManager] invalidateLayoutForCharacterRange:range actualCharacterRange:NULL];
+            [[_rdOutputView layoutManager] invalidateDisplayForCharacterRange:range];
+            [_rdOutputView setNeedsDisplay:YES];
+        }
+    }];
 }
 
 - (void) appendStringNoTimestamp:(NSAttributedString *)string
