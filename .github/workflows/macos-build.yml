@@ -1,0 +1,50 @@
+name: macOS test build
+on:
+  push:
+    branches: ['codex/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: Atlantis
+      - uses: actions/checkout@v4
+        with:
+          repository: Balerion300/Lemuria
+          ref: 5e19a23f46366fb1700b58e7ab2325575e58b85a
+          path: Lemuria
+      - name: Build app without developer credentials
+        shell: bash
+        run: |
+          set -o pipefail
+          xcodebuild -project Atlantis/Atlantis.xcodeproj -target Atlantis -configuration Release \
+            SYMROOT="$GITHUB_WORKSPACE/products" OBJROOT="$GITHUB_WORKSPACE/intermediates" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            ONLY_ACTIVE_ARCH=NO ARCHS=arm64 MACOSX_DEPLOYMENT_TARGET=13.5 \
+            build 2>&1 | tee build.log
+      - name: Package test app
+        shell: bash
+        run: |
+          set -euo pipefail
+          app="$GITHUB_WORKSPACE/products/Release/Atlantis.app"
+          test -x "$app/Contents/MacOS/Atlantis"
+          /usr/bin/codesign --force --deep --sign - "$app"
+          /usr/bin/codesign --verify --deep --strict "$app"
+          mkdir -p artifacts
+          /usr/bin/ditto -c -k --sequesterRsrc --keepParent "$app" artifacts/Atlantis-macOS-Apple-Silicon.zip
+          /usr/bin/shasum -a 256 artifacts/*.zip > artifacts/SHA256SUMS.txt
+          /usr/bin/file "$app/Contents/MacOS/Atlantis" | tee artifacts/architecture.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Atlantis-macOS-test-build
+          path: |
+            artifacts/*
+            build.log
+          if-no-files-found: error
+          retention-days: 30
