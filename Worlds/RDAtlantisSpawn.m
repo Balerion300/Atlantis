@@ -738,14 +738,25 @@ extern NSInteger compareViews(id view1, id view2, void *context);
 - (void)refreshMarkupAttachment:(NSTextAttachment *)attachment
 {
     [_rdOutputView commit];
+    RDScrollView *scrollView=(RDScrollView *)[_rdOutputView enclosingScrollView];
+    BOOL following=[scrollView autoScroll];
     NSTextStorage *storage=[_rdOutputView textStorage];
+    __block BOOL changed=NO;
     [storage enumerateAttribute:NSAttachmentAttributeName inRange:NSMakeRange(0,storage.length) options:0 usingBlock:^(id value,NSRange range,BOOL *stop) {
         if (value == attachment) {
             [[_rdOutputView layoutManager] invalidateLayoutForCharacterRange:range actualCharacterRange:NULL];
             [[_rdOutputView layoutManager] invalidateDisplayForCharacterRange:range];
-            [_rdOutputView setNeedsDisplay:YES];
+            changed=YES;
         }
     }];
+    if (changed) {
+        // An asynchronously loaded image can be taller than its placeholder.
+        // Finish that layout before following the tail, and leave readers who
+        // have scrolled back at their current position.
+        [[_rdOutputView layoutManager] ensureLayoutForTextContainer:[_rdOutputView textContainer]];
+        [_rdOutputView setNeedsDisplay:YES];
+        if (following) [_rdOutputView performScrollToEnd];
+    }
 }
 
 - (void) appendStringNoTimestamp:(NSAttributedString *)string
