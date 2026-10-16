@@ -1,3 +1,7 @@
+## Additional native room comparison — 16 October
+
+The old and repaired released apps were also connected as separate guests and brought to Balerion's actual room, then returned to their starting lounge. Both received room-image URLs and created two native image attachments. The repaired app retained room text and command-link attributes without literal protocol tags; normal angle-bracket help/channel/exit labels remain plain text. The old app still leaked the initial closing XCH_MUDTEXT control. Broad raw-tag corruption was not reproduced there, so Aimery's precise report still needs their room/configuration or a retest. Reports redact room prose and player output before artifact upload. [Native room comparison](https://github.com/Balerion300/Atlantis/actions/runs/38967061933).
+
 ## 16 October 2026 rendering repair
 
 The 11 October published app was exercised against Blood of Dragons using its actual native world/session classes on a macOS 15.7.9 Apple Silicon runner. Plain Telnet received the full game response but lost most styled output when the disabled markup filter replaced its mutable input with itself. The filter now leaves unchanged input untouched. With Pueblo enabled, PennMUSH's initial closing literal-mode tag leaked into the transcript, and its hide-graphics control produced a false image placeholder. Both controls are now consumed without adding visible text or image requests.
