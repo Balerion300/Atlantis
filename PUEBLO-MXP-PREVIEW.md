@@ -10,7 +10,7 @@ also establishes the requested mode without needing `XCH_MODE` first.
 Plain-text profiles and connections without the Pueblo greeting stay unchanged.
 Links/images alone do not trigger recovery. An explicit literal/text mode is
 respected, active MXP is not taken over, and reconnecting clears the recovery
-state. Ordinary unknown labels such as `<Staff>` remain text. Previously displayed
+state. During inferred recovery, unknown labels such as `<Staff>` remain text. Previously displayed
 raw markup is not rewritten retroactively.
 
 The controlled released-app investigation found no parser state sharing between
@@ -18,6 +18,12 @@ two characters and no failure caused by ordinary channel spawns. It did reproduc
 the reported raw-tag symptom when the initial mode announcement was omitted.
 That is a reproducible failure path; Damphair's exact live sequence remains
 unconfirmed.
+
+The recovered packaged app passed the nine native character/spawn scenarios,
+including missing-mode room output and Staff routing, plus the previous scrolling
+comparison and 55 focused markup/image checks. [Native build and checks](https://github.com/Balerion300/Atlantis/actions/runs/38972640811).
+[Download the recovery preview](https://github.com/Balerion300/Atlantis/releases/tag/pueblo-recovery-macos-2026-10-16).
+Live player confirmation remains pending.
 
 ## Room-image scrolling follow-up — 16 October
 
