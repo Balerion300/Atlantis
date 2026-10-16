@@ -1,86 +1,29 @@
-name: macOS test build
+name: macOS Pueblo spawn diagnosis
 on:
-  push:
-    branches: ['codex/**']
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  build:
+  diagnose:
     runs-on: macos-15
-    timeout-minutes: 20
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
         with:
           path: Atlantis
-      - uses: actions/checkout@v4
-        with:
-          repository: Balerion300/Lemuria
-          ref: 5e19a23f46366fb1700b58e7ab2325575e58b85a
-          path: Lemuria
-      - name: Focused Pueblo and MXP checks
+      - name: Test actual released app offline
         shell: bash
         run: |
           set -euo pipefail
-          python3 Atlantis/Tests/image_fixture.py &
-          fixture=$!
-          trap 'kill "$fixture" 2>/dev/null || true' EXIT
-          curl --fail --silent --retry 3 --retry-connrefused --retry-delay 1 --output /tmp/markup-fixture.png http://127.0.0.1:8935/image.png
-          clang -fblocks -DRD_MARKUP_TEST -framework Cocoa -framework ImageIO -I"Atlantis/Filter System" \
-            Atlantis/Tests/MarkupTests.m "Atlantis/Filter System/RDMarkupParser.m" \
-            "Atlantis/Filter System/RDMarkupImageLoader.m" -o markup-tests
-          ./markup-tests | tee markup-tests.log
-          clang -fblocks -framework Cocoa -IAtlantis/Tests/Stubs -I"Atlantis/Filter System" \
-            Atlantis/Tests/TelnetTests.m "Atlantis/Filter System/RDAtlantisFilter.m" \
-            "Atlantis/Filter System/RDTelnetFilter.m" -o telnet-tests
-          ./telnet-tests | tee telnet-tests.log
-          clang -fblocks -framework Cocoa -framework ImageIO -IAtlantis/Tests/FilterStubs -IAtlantis/Tests/Stubs -I"Atlantis/Filter System" \
-            Atlantis/Tests/MarkupFilterTests.m "Atlantis/Filter System/RDAtlantisFilter.m" \
-            "Atlantis/Filter System/RDMarkupFilter.m" "Atlantis/Filter System/RDMarkupParser.m" \
-            "Atlantis/Filter System/RDMarkupImageLoader.m" -o markup-filter-tests
-          ./markup-filter-tests | tee markup-filter-tests.log
-      - name: Build app without developer credentials
-        shell: bash
-        run: |
-          set -o pipefail
-          xcodebuild -project Atlantis/Atlantis.xcodeproj -target Atlantis -configuration Release \
-            SYMROOT="$GITHUB_WORKSPACE/products" OBJROOT="$GITHUB_WORKSPACE/intermediates" \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
-            ONLY_ACTIVE_ARCH=NO ARCHS=arm64 MACOSX_DEPLOYMENT_TARGET=13.5 \
-            build 2>&1 | tee build.log
-      - name: Package test app
-        shell: bash
-        run: |
-          set -euo pipefail
-          app="$GITHUB_WORKSPACE/products/Release/Atlantis.app"
-          test -x "$app/Contents/MacOS/Atlantis"
-          /usr/bin/codesign --force --deep --sign - "$app"
-          /usr/bin/codesign --verify --deep --strict "$app"
-          mkdir -p artifacts
-          /usr/bin/ditto -c -k --sequesterRsrc --keepParent "$app" artifacts/Atlantis-macOS-Apple-Silicon.zip
-          /usr/bin/shasum -a 256 artifacts/*.zip > artifacts/SHA256SUMS.txt
-          /usr/bin/file "$app/Contents/MacOS/Atlantis" | tee artifacts/architecture.txt
-      - name: Native offline image scroll comparison
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p diagnostic/baseline
-          curl --fail --location --silent https://github.com/Balerion300/Atlantis/releases/download/pueblo-mxp-rendering-macos-2026-10-16/Atlantis-macOS-Apple-Silicon.zip -o diagnostic/baseline.zip
-          ditto -x -k diagnostic/baseline.zip diagnostic/baseline
-          clang -dynamiclib -fblocks -framework Cocoa Atlantis/Tests/Packaged/ScrollProbe.m -o diagnostic/ScrollProbe.dylib
-          codesign --force --sign - diagnostic/ScrollProbe.dylib
-          python3 Atlantis/Tests/Packaged/run_scroll.py diagnostic/baseline/Atlantis.app diagnostic/results/baseline --baseline
-          python3 Atlantis/Tests/Packaged/run_scroll.py products/Release/Atlantis.app diagnostic/results/fixed
+          mkdir -p diagnostic/release
+          curl --fail --location --silent https://github.com/Balerion300/Atlantis/releases/download/pueblo-image-scroll-macos-2026-10-16/Atlantis-macOS-Apple-Silicon.zip -o diagnostic/release.zip
+          ditto -x -k diagnostic/release.zip diagnostic/release
+          clang -dynamiclib -fblocks -framework Cocoa Atlantis/Tests/Packaged/SpawnPuebloProbe.m -o diagnostic/SpawnPuebloProbe.dylib
+          codesign --force --sign - diagnostic/SpawnPuebloProbe.dylib
+          python3 Atlantis/Tests/Packaged/run_spawn_pueblo.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: Atlantis-macOS-test-build
-          path: |
-            artifacts/*
-            build.log
-            markup-tests.log
-            telnet-tests.log
-            markup-filter-tests.log
-            diagnostic/results/**
-          if-no-files-found: error
+          name: Pueblo-spawn-diagnosis
+          path: diagnostic/results/*
           retention-days: 30
