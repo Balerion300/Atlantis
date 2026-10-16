@@ -124,7 +124,7 @@ int main(void) {
         Check([[recovery consume:Text(@"This world is Pueblo 1.10 Enhanced.\nCode<BR>\n")].string containsString:@"Code<BR>"],@"disabled Pueblo remains literal despite greeting and break");
         [recovery configurePueblo:YES mxp:YES];[recovery activateMXP:YES];
         [recovery consume:Text(@"This world is Pueblo 1.10 Enhanced.\n")];
-        Check([[recovery consume:Text(@"MXP<BR>\n")].string isEqualToString:@"MXP\n\n"],@"recovery never takes over an active MXP session");
+        Check([[recovery consume:Text(@"\033[1zMXP<BR>\n")].string isEqualToString:@"MXP\n\n"] && ![[recovery valueForKey:@"_puebloActive"] boolValue],@"recovery never takes over an active MXP session");
         recovery.delegate=nil;[recovery release];[rd release];
         RDMarkupImageLoader *loader=[RDMarkupImageLoader new]; loader.delegate=d;
         NSAttributedString *image=[loader image:[NSURL URLWithString:@"http://127.0.0.1:8935/image.png"] alternate:@"Fixture"];
