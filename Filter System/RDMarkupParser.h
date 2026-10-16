@@ -11,6 +11,7 @@
 @interface RDMarkupParser : NSObject {
     id<RDMarkupDelegate> _delegate; // non-owning; cleared by owner before disposal
     BOOL _puebloEnabled, _mxpEnabled, _puebloActive, _html, _mxpActive, _replied;
+    BOOL _puebloRecovered; // Heuristic recovery preserves unfamiliar text labels.
     NSInteger _mode, _defaultMode;
     BOOL _temporarySecure;
     NSMutableAttributedString *_pending;

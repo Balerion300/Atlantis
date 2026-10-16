@@ -98,7 +98,7 @@ static NSDictionary *RDTag(NSString *token) {
 @synthesize delegate = _delegate;
 - (id)init { if ((self=[super init])) { _pending=[NSMutableAttributedString new]; _style=[NSMutableDictionary new]; _stack=[NSMutableArray new]; _greeting=[NSMutableString new]; } return self; }
 - (void)dealloc { [_pending release]; [_style release]; [_stack release]; [_greeting release]; [super dealloc]; }
-- (void)reset { [_pending setAttributedString:[[[NSAttributedString alloc] initWithString:@""] autorelease]]; [_style removeAllObjects]; [_stack removeAllObjects]; [_greeting setString:@""]; _puebloActive=_html=_mxpActive=_replied=_temporarySecure=NO; _mode=_defaultMode=0; _hidden=_pre=_puebloBreakEnding=0; _hasOutput=NO; _lastCharacter=0; }
+- (void)reset { [_pending setAttributedString:[[[NSAttributedString alloc] initWithString:@""] autorelease]]; [_style removeAllObjects]; [_stack removeAllObjects]; [_greeting setString:@""]; _puebloActive=_html=_mxpActive=_replied=_temporarySecure=_puebloRecovered=NO; _mode=_defaultMode=0; _hidden=_pre=_puebloBreakEnding=0; _hasOutput=NO; _lastCharacter=0; }
 - (void)configurePueblo:(BOOL)pueblo mxp:(BOOL)mxp { if (pueblo!=_puebloEnabled || mxp!=_mxpEnabled) [self reset]; _puebloEnabled=pueblo; _mxpEnabled=mxp; }
 - (void)activateMXP:(BOOL)enabled { _mxpActive=enabled && _mxpEnabled; _mode=_defaultMode=0; [_style removeAllObjects]; [_stack removeAllObjects]; _hidden=_pre=_puebloBreakEnding=0; }
 + (NSURL *)safeURL:(NSString *)value { if (!value || value.length>2048 || [value rangeOfCharacterFromSet:NSCharacterSet.controlCharacterSet].location!=NSNotFound) return nil; NSURL *url=[NSURL URLWithString:value]; if (!url.host.length || url.user.length || url.password.length) return nil; return ([@[@"http",@"https"] containsObject:url.scheme.lowercaseString]) ? url : nil; }
@@ -135,13 +135,13 @@ static NSDictionary *RDTag(NSString *token) {
     BOOL secure=!mxp || _mode==1 || _temporarySecure;
     _temporarySecure=NO;
     if (!mxp && [tag isEqualToString:@"img"] && a[@"xch_mode"] && _puebloEnabled) {
-        NSString *mode=[a[@"xch_mode"] lowercaseString]; _puebloActive=YES;
+        NSString *mode=[a[@"xch_mode"] lowercaseString]; _puebloActive=YES; _puebloRecovered=NO;
         _html=[@[@"html",@"purehtml"] containsObject:mode]; return YES;
     }
     // PennMUSH closes literal mode before announcing its initial HTML mode.
     if (!mxp && _puebloEnabled && (_puebloActive || _replied) && [tag isEqualToString:@"xch_mudtext"]) {
         // This is itself an explicit mode declaration, even if XCH_MODE was lost.
-        _puebloActive=YES; _html=closing;
+        _puebloActive=YES; _html=closing; _puebloRecovered=NO;
         return YES;
     }
     // XCH_GRAPH is a Pueblo display control, not an image with a missing URL.
@@ -151,6 +151,7 @@ static NSDictionary *RDTag(NSString *token) {
     BOOL format=[@[@"b",@"strong",@"i",@"em",@"u",@"s",@"strike",@"del",@"font",@"color",@"c",@"pre"] containsObject:tag];
     BOOL block=[@[@"p",@"div"] containsObject:tag];
     BOOL link=[@[@"a",@"send"] containsObject:tag];
+    if (_puebloRecovered && !dangerous && !format && !block && !link && ![@[@"img",@"image",@"br",@"hr"] containsObject:tag]) return NO;
     if (mxp && !secure && !format) return NO;
     if (closing) {
         for (NSInteger i=(NSInteger)_stack.count-1;i>=0;i--) if ([_stack[i][@"tag"] isEqualToString:tag]) {
@@ -233,7 +234,7 @@ static NSDictionary *RDTag(NSString *token) {
         static dispatch_once_t once;
         dispatch_once(&once,^{ recoveryBreak=[[NSRegularExpression alloc] initWithPattern:@"<br[\\t ]*/?[\\t ]*>[\\t ]*(?:\\r?\\n|$)" options:NSRegularExpressionCaseInsensitive error:NULL]; });
         if ([recoveryBreak firstMatchInString:s options:0 range:NSMakeRange(0,s.length)]) {
-            _puebloActive=YES; _html=YES;
+            _puebloActive=YES; _html=YES; _puebloRecovered=YES;
         }
     }
     NSUInteger i=0;

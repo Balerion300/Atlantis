@@ -1,3 +1,24 @@
+## Missing Pueblo mode recovery — 16 October
+
+Pueblo-enabled connections can recover if the server's initial `XCH_MODE`
+announcement is missing. Recovery requires the Pueblo greeting and Atlantis's
+handshake reply, followed by a complete line-ending `<BR>` (case-insensitive).
+It enables HTML interpretation for subsequent output through the existing parser;
+it does not automatically send game commands. An explicit `XCH_MUDTEXT` control
+also establishes the requested mode without needing `XCH_MODE` first.
+
+Plain-text profiles and connections without the Pueblo greeting stay unchanged.
+Links/images alone do not trigger recovery. An explicit literal/text mode is
+respected, active MXP is not taken over, and reconnecting clears the recovery
+state. Ordinary unknown labels such as `<Staff>` remain text. Previously displayed
+raw markup is not rewritten retroactively.
+
+The controlled released-app investigation found no parser state sharing between
+two characters and no failure caused by ordinary channel spawns. It did reproduce
+the reported raw-tag symptom when the initial mode announcement was omitted.
+That is a reproducible failure path; Damphair's exact live sequence remains
+unconfirmed.
+
 ## Room-image scrolling follow-up — 16 October
 
 Aimery confirmed that object and exit command links work in our rendering preview,
