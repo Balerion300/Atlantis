@@ -1,3 +1,13 @@
+## 16 October 2026 rendering repair
+
+The 11 October published app was exercised against Blood of Dragons using its actual native world/session classes on a macOS 15.7.9 Apple Silicon runner. Plain Telnet received the full game response but lost most styled output when the disabled markup filter replaced its mutable input with itself. The filter now leaves unchanged input untouched. With Pueblo enabled, PennMUSH's initial closing literal-mode tag leaked into the transcript, and its hide-graphics control produced a false image placeholder. Both controls are now consumed without adding visible text or image requests.
+
+Focused tests and a fresh packaged-app guest connection over plain Telnet, Pueblo/Telnet and Pueblo/TLS passed. The normal welcome, guest-room description and exits are present; protocol tags and the false image placeholder are absent; Pueblo command-link attributes remain. Only the public Guest login, look and protocol handshake were sent. No private profiles or credentials are bundled.
+
+This does not establish Aimery's exact room/settings report is fully resolved. That report needs a player retest. The guest room supplied no image URL, so real remote-image acceptance is not claimed by this live check. Downloads retain ad-hoc signing and are not notarized. Quit every running Atlantis copy, unzip the update separately, and enable Pueblo in Address Book → Pueblo and MXP before reconnecting. Existing Address Book settings are retained.
+
+---
+
 # Pueblo and MXP Mac preview
 
 This experimental branch extends jimcheng256's modernized Atlantis and uses the

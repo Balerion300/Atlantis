@@ -70,6 +70,7 @@ jobs:
           codesign --force --sign - diagnostic/LiveProbe.dylib
           python3 Atlantis/Tests/Packaged/run_probe.py
           python3 Atlantis/Tests/Packaged/summarize.py
+          python3 Atlantis/Tests/Packaged/validate_rendering.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
