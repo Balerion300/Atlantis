@@ -1,3 +1,25 @@
+## Room-image scrolling follow-up — 16 October
+
+Aimery confirmed that object and exit command links work in our rendering preview,
+but reported that a room description can stop scrolling before its contents and
+exits are visible. The image-completion path invalidated the attachment layout
+without following the newly enlarged document. It now completes that layout and
+scrolls to the end only when the pane was already following output. Readers who
+have scrolled back retain their position. Images no longer present in a pane do
+not change its scroll position.
+
+`Tests/Packaged/ScrollProbe.m` exercises the actual packaged app offline with a
+synthetic room and delayed image growth, including a reader in scrollback. This
+check does not connect to the game or send commands. Player confirmation of the
+scrolling follow-up remains necessary.
+
+The native comparison reproduced a 319-point gap below the released app's visible
+output after image growth; the patched app reached the bottom (zero gap). The
+scrollback reader remained at the same 80-point scroll position in both apps,
+and an absent attachment caused no movement. The native build, 43 focused
+markup/image checks, three styled-output checks, and Telnet/MXP checks passed.
+[Build and offline comparison](https://github.com/Balerion300/Atlantis/actions/runs/38969214371).
+
 ## Additional native room comparison — 16 October
 
 The old and repaired released apps were also connected as separate guests and brought to Balerion's actual room, then returned to their starting lounge. Both received room-image URLs and created two native image attachments. The repaired app retained room text and command-link attributes without literal protocol tags; normal angle-bracket help/channel/exit labels remain plain text. The old app still leaked the initial closing XCH_MUDTEXT control. Broad raw-tag corruption was not reproduced there, so Aimery's precise report still needs their room/configuration or a retest. Reports redact room prose and player output before artifact upload. [Native room comparison](https://github.com/Balerion300/Atlantis/actions/runs/38967061933).

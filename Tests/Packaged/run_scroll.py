@@ -14,5 +14,7 @@ assert len(rows)==3 and not any('exception' in r for r in rows),rows
 assert rows[0]['initialGap'] <= 2, rows
 if '--baseline' not in sys.argv:
     assert rows[0]['gap']<=2, 'Following output did not stay at bottom after image growth'
+    assert rows[0]['following'], 'Following mode was lost'
     assert abs(rows[1]['afterY']-rows[1]['beforeY'])<=2, 'Image loading moved a scrollback reader'
     assert not rows[1]['following'], 'Image loading enabled auto-scroll for a scrollback reader'
+    assert abs(rows[2]['afterY']-rows[2]['beforeY'])<=2, 'An absent attachment moved the pane'
