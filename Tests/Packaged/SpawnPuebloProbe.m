@@ -25,7 +25,7 @@ static NSDictionary *Snapshot(id world) {
     for(NSString *key in spawns) {
         NSTextView *view=[spawns[key] valueForKey:@"_rdOutputView"];
         [(id)view commit];
-        text[key]=view.textStorage.string?:@"";
+        text[key]=[[view.textStorage.string?:@"" copy] autorelease];
     }
     return text;
 }
@@ -71,6 +71,15 @@ static void Run(void) {
         Feed(two,Room);Feed(one,Room);
         Feed(two,@"Two &amp; literal<BR>\r\n");Feed(one,@"One &amp; parsed<BR>\r\n");
         [results addObject:@{@"case":@"simultaneous-opposite-settings",@"enabledOne":[one preferenceForKey:@"atlantis.pueblo.enabled"],@"enabledTwo":[two preferenceForKey:@"atlantis.pueblo.enabled"],@"one":Snapshot(one),@"two":Snapshot(two)}];
+        [prefs setPreference:@YES forKey:@"atlantis.pueblo.enabled" withCharacter:@"Two"];
+        // Simulate Two reconnecting with Pueblo enabled; One remains active.
+        for(id spawn in [[two valueForKey:@"_rdSpawns"] allValues]) {
+            NSTextView *output=[spawn valueForKey:@"_rdOutputView"];
+            [output.textStorage setAttributedString:[[[NSAttributedString alloc] initWithString:@""] autorelease]];
+        }
+        [[NSNotificationCenter defaultCenter] postNotificationName:@"RDAtlantisConnectionDidConnectNotification" object:two];
+        Feed(two,Greeting);Feed(two,Room);Feed(one,@"One still &amp; parsed<BR>\r\n");
+        [results addObject:@{@"case":@"simultaneous-both-enabled",@"one":Snapshot(one),@"two":Snapshot(two)}];
         // Already-formatted server output without its initial mode declaration.
         id noMode=World(Prefs(@"no-mode",YES,YES),@"One",@"no-mode");
         Feed(noMode,@"This world is Pueblo 1.10 Enhanced.\r\n");Feed(noMode,Room);
@@ -78,7 +87,7 @@ static void Run(void) {
     } @catch(NSException *e) { [results addObject:@{@"exception":e.name,@"reason":e.reason?:@""}]; }
     NSData *data=[NSJSONSerialization dataWithJSONObject:@{@"results":results,@"capturedReplies":sent,@"gameConnections":@0} options:NSJSONWritingPrettyPrinted error:NULL];
     [data writeToFile:[Directory() stringByAppendingPathComponent:@"spawn-pueblo.json"] atomically:YES];
-    exit(results.count==8?0:2);
+    exit(results.count==9?0:2);
 }
 __attribute__((constructor)) static void Begin(void) {
     if(!Directory()) return;

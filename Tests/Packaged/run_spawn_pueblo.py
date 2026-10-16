@@ -10,7 +10,7 @@ if code:raise RuntimeError(f'Native probe exited {code}')
 doc=json.loads((out/'spawn-pueblo.json').read_text())
 for row in doc['results']:
     print(json.dumps(row))
-assert len(doc['results'])==8
+assert len(doc['results'])==9
 for row in doc['results'][:6]:
     before=''.join(row['before'].values());after=''.join(row['afterSpawnUpdate'].values())
     if row['enabled']:
@@ -22,4 +22,8 @@ for row in doc['results'][:6]:
 row=doc['results'][6]
 assert '<BR>' not in ''.join(row['one'].values()),row
 assert '<BR>' in ''.join(row['two'].values()),row
+row=doc['results'][7]
+assert '<BR>' not in ''.join(row['one'].values()),row
+assert '<BR>' not in ''.join(row['two'].values()),row
+assert 'One still & parsed' in ''.join(row['one'].values()),row
 print('PASS: settings, spawn refresh and concurrent-character isolation checks')
