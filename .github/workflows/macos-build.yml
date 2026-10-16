@@ -1,44 +1,85 @@
-name: macOS released-app live diagnostics
+name: macOS test build
 on:
+  push:
+    branches: ['codex/**']
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  diagnostic:
+  build:
     runs-on: macos-15
-    timeout-minutes: 8
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - name: Download the existing Apple Silicon release
+        with:
+          path: Atlantis
+      - uses: actions/checkout@v4
+        with:
+          repository: Balerion300/Lemuria
+          ref: 5e19a23f46366fb1700b58e7ab2325575e58b85a
+          path: Lemuria
+      - name: Focused Pueblo and MXP checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 Atlantis/Tests/image_fixture.py &
+          fixture=$!
+          trap 'kill "$fixture" 2>/dev/null || true' EXIT
+          curl --fail --silent --retry 3 --retry-connrefused --retry-delay 1 --output /tmp/markup-fixture.png http://127.0.0.1:8935/image.png
+          clang -fblocks -DRD_MARKUP_TEST -framework Cocoa -framework ImageIO -I"Atlantis/Filter System" \
+            Atlantis/Tests/MarkupTests.m "Atlantis/Filter System/RDMarkupParser.m" \
+            "Atlantis/Filter System/RDMarkupImageLoader.m" -o markup-tests
+          ./markup-tests | tee markup-tests.log
+          clang -fblocks -framework Cocoa -IAtlantis/Tests/Stubs -I"Atlantis/Filter System" \
+            Atlantis/Tests/TelnetTests.m "Atlantis/Filter System/RDAtlantisFilter.m" \
+            "Atlantis/Filter System/RDTelnetFilter.m" -o telnet-tests
+          ./telnet-tests | tee telnet-tests.log
+          clang -fblocks -framework Cocoa -framework ImageIO -IAtlantis/Tests/FilterStubs -IAtlantis/Tests/Stubs -I"Atlantis/Filter System" \
+            Atlantis/Tests/MarkupFilterTests.m "Atlantis/Filter System/RDAtlantisFilter.m" \
+            "Atlantis/Filter System/RDMarkupFilter.m" "Atlantis/Filter System/RDMarkupParser.m" \
+            "Atlantis/Filter System/RDMarkupImageLoader.m" -o markup-filter-tests
+          ./markup-filter-tests | tee markup-filter-tests.log
+      - name: Build app without developer credentials
+        shell: bash
+        run: |
+          set -o pipefail
+          xcodebuild -project Atlantis/Atlantis.xcodeproj -target Atlantis -configuration Release \
+            SYMROOT="$GITHUB_WORKSPACE/products" OBJROOT="$GITHUB_WORKSPACE/intermediates" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            ONLY_ACTIVE_ARCH=NO ARCHS=arm64 MACOSX_DEPLOYMENT_TARGET=13.5 \
+            build 2>&1 | tee build.log
+      - name: Package test app
+        shell: bash
+        run: |
+          set -euo pipefail
+          app="$GITHUB_WORKSPACE/products/Release/Atlantis.app"
+          test -x "$app/Contents/MacOS/Atlantis"
+          /usr/bin/codesign --force --deep --sign - "$app"
+          /usr/bin/codesign --verify --deep --strict "$app"
+          mkdir -p artifacts
+          /usr/bin/ditto -c -k --sequesterRsrc --keepParent "$app" artifacts/Atlantis-macOS-Apple-Silicon.zip
+          /usr/bin/shasum -a 256 artifacts/*.zip > artifacts/SHA256SUMS.txt
+          /usr/bin/file "$app/Contents/MacOS/Atlantis" | tee artifacts/architecture.txt
+      - name: Native packaged app guest rendering
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p diagnostic/release
-          curl --fail --location --retry 2 --output diagnostic/release.zip https://github.com/Balerion300/Atlantis/releases/download/pueblo-mxp-spacing-macos-2026-10-11/Atlantis-macOS-Apple-Silicon.zip
-          echo 'ca732790fbdffccd1223b857d3e5eec3704ab7b9dbe080aeff01b8e5c21c6fef  diagnostic/release.zip' | shasum -a 256 -c -
-          ditto -x -k diagnostic/release.zip diagnostic/release
-          codesign --verify --deep --strict diagnostic/release/Atlantis.app
-          file diagnostic/release/Atlantis.app/Contents/MacOS/Atlantis | tee diagnostic/architecture.txt
-          sw_vers | tee diagnostic/macos.txt
-      - name: Run actual released app against Blood of Dragons
-        shell: bash
-        run: |
-          set -euo pipefail
-          clang -dynamiclib -fblocks -framework Cocoa Tests/Packaged/LiveProbe.m -o diagnostic/LiveProbe.dylib
+          ditto "$GITHUB_WORKSPACE/products/Release/Atlantis.app" diagnostic/release/Atlantis.app
+          clang -dynamiclib -fblocks -framework Cocoa Atlantis/Tests/Packaged/LiveProbe.m -o diagnostic/LiveProbe.dylib
           codesign --force --sign - diagnostic/LiveProbe.dylib
-          python3 Tests/Packaged/run_probe.py
-      - name: Collect reports
-        if: always()
-        shell: bash
-        run: |
-          mkdir -p diagnostic/results
-          python3 Tests/Packaged/summarize.py
+          python3 Atlantis/Tests/Packaged/run_probe.py
+          python3 Atlantis/Tests/Packaged/summarize.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: Atlantis-released-app-live-diagnostics
+          name: Atlantis-macOS-test-build
           path: |
+            artifacts/*
+            build.log
+            markup-tests.log
+            telnet-tests.log
+            markup-filter-tests.log
             diagnostic/results/*
-            diagnostic/architecture.txt
-            diagnostic/macos.txt
-          retention-days: 14
+          if-no-files-found: error
+          retention-days: 30

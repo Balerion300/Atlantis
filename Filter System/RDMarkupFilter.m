@@ -17,7 +17,13 @@
     [_parser configurePueblo:[[[self world] preferenceForKey:@"atlantis.pueblo.enabled"] boolValue] mxp:[[[self world] preferenceForKey:@"atlantis.mxp.enabled"] boolValue]];
     [_commands removeAllObjects]; [_loader shutdown]; [_loader release]; _loader=nil;
 }
-- (void)filterInput:(id)input { if ([input isKindOfClass:NSMutableAttributedString.class]) [(NSMutableAttributedString *)input setAttributedString:[_parser consume:input]]; }
+- (void)filterInput:(id)input {
+    if (![input isKindOfClass:NSMutableAttributedString.class]) return;
+    NSAttributedString *parsed=[_parser consume:input];
+    // Disabled parsing returns the original mutable object. Cocoa's setter
+    // must not read from the same storage it is replacing.
+    if (parsed!=input) [(NSMutableAttributedString *)input setAttributedString:parsed];
+}
 - (void)markupReply:(NSString *)reply { [[self world] sendString:[reply stringByTrimmingCharactersInSet:NSCharacterSet.newlineCharacterSet]]; }
 - (NSURL *)markupCommand:(NSString *)command {
     id setting=[[self world] preferenceForKey:@"atlantis.markup.commands"];

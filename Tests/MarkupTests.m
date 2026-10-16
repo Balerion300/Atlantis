@@ -50,11 +50,14 @@ int main(void) {
         Check([[p consume:Text(@"<Staff> Hello\n")].string isEqualToString:@"<Staff> Hello\n"],@"channel markers before activation");
         [p consume:Text(@"This world is Pueblo 1.")]; [p consume:Text(@"10 Enhanced.\n")]; [p consume:Text(@"This world is Pueblo 1.10 Enhanced.\n")];
         Check(d->replies.count==1 && [d->replies[0] isEqualToString:@"PUEBLOCLIENT 1.10\n"],@"fragmented greeting replies once");
+        Check([[p consume:Text(@"</xch_mudtext>")].string isEqualToString:@""],@"PennMUSH initial literal-mode closing tag is a control");
         [p consume:Text(@"<img xch_mode=pu")];
         NSAttributedString *out=[p consume:Text(@"rehtml><b>Bold</b> &amp; <a xch_cmd='look' xch_hint='Look'>Room</a><img src='https://example.com/a.png' alt='Castle'>")];
         Check([out.string isEqualToString:@"Bold & Room[Castle]"],@"fragmented Pueblo controls and entities");
         Check([out attribute:NSLinkAttributeName atIndex:7 effectiveRange:NULL]!=nil && d->commands.count==1,@"clickable Pueblo command metadata, no execution");
         Check(d->images==1,@"inline image URL extracted");
+        Check([[p consume:Text(@"<IMG XCH_GRAPH=HIDE><IMG XCH_GRAPH=SHOW>")].string isEqualToString:@""],@"Pueblo graphics controls do not display phantom images");
+        Check(d->images==1,@"graphics controls do not request downloads");
         Check([[out attribute:NSForegroundColorAttributeName atIndex:7 effectiveRange:NULL] isEqual:NSColor.cyanColor],@"ANSI attributes retained");
         Check([[p consume:Text(@"<xch_mudtext><Public> &amp;</xch_mudtext>&lt;")].string isEqualToString:@"<Public> &amp;<"],@"Pueblo literal text mode");
         Check([[p consume:Text(@"<script><b>bad</b></script>safe")].string isEqualToString:@"safe"],@"hidden executable content");

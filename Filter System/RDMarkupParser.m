@@ -138,7 +138,13 @@ static NSDictionary *RDTag(NSString *token) {
         NSString *mode=[a[@"xch_mode"] lowercaseString]; _puebloActive=YES;
         _html=[@[@"html",@"purehtml"] containsObject:mode]; return YES;
     }
-    if (!mxp && _puebloActive && [tag isEqualToString:@"xch_mudtext"]) { _html=closing; return YES; }
+    // PennMUSH closes literal mode before announcing its initial HTML mode.
+    if (!mxp && _puebloEnabled && (_puebloActive || _replied) && [tag isEqualToString:@"xch_mudtext"]) {
+        if (_puebloActive) _html=closing;
+        return YES;
+    }
+    // XCH_GRAPH is a Pueblo display control, not an image with a missing URL.
+    if (!mxp && _puebloActive && [tag isEqualToString:@"img"] && a[@"xch_graph"]) return YES;
     if ((!mxp && !(_puebloActive && _html)) || (mxp && _mode==2)) return NO;
     BOOL dangerous=[@[@"script",@"style",@"iframe",@"object",@"embed",@"form",@"head",@"title"] containsObject:tag];
     BOOL format=[@[@"b",@"strong",@"i",@"em",@"u",@"s",@"strike",@"del",@"font",@"color",@"c",@"pre"] containsObject:tag];
