@@ -7,6 +7,7 @@
 - (id)initWithWorld:(id)world forCharacter:(NSString *)character withBasePath:(NSString *)path;
 - (void)setPreference:(id)value forKey:(NSString *)key withCharacter:(NSString *)character;
 - (void)connect;
+- (void)filterInput:(id)input;
 - (BOOL)isConnected;
 - (void)disconnect;
 - (void)sendString:(NSString *)text;
@@ -71,6 +72,17 @@ static void RunCase(int index) {
         for (NSString *key in settings) [prefs setPreference:settings[key] forKey:key withCharacter:nil];
         currentWorld=[[NSClassFromString(@"RDAtlantisWorldInstance") alloc] initWithWorld:prefs forCharacter:nil withBasePath:[@"Mac diagnostic/" stringByAppendingString:names[index]]];
         wire=[NSMutableData new];sent=[NSMutableArray new];
+        NSMutableArray *filterChecks=[NSMutableArray new];
+        for (id filter in [currentWorld valueForKey:@"_rdInputFilters"]) {
+            if ([NSStringFromClass([filter class]) isEqualToString:@"RDMarkupFilter"] && index==0) {
+                for (NSString *sample in @[@"Plain words and a line.\n",@"<Guest> Plain channel.\n"]) {
+                    NSMutableAttributedString *input=[[[NSMutableAttributedString alloc] initWithString:sample] autorelease];
+                    [filter filterInput:input];
+                    [filterChecks addObject:@{@"input":sample,@"output":input.string}];
+                }
+            }
+        }
+        Save([names[index] stringByAppendingString:@"-filter-check.json"],filterChecks);
         [currentWorld connect];
         Tick(index,names[index],[NSDate date],NO,NO);
     } @catch(NSException *e) { Save(@"startup-error.json",@{@"exception":e.name,@"reason":e.reason?:@""});exit(2); }
