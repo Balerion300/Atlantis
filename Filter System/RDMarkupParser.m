@@ -140,7 +140,8 @@ static NSDictionary *RDTag(NSString *token) {
     }
     // PennMUSH closes literal mode before announcing its initial HTML mode.
     if (!mxp && _puebloEnabled && (_puebloActive || _replied) && [tag isEqualToString:@"xch_mudtext"]) {
-        if (_puebloActive) _html=closing;
+        // This is itself an explicit mode declaration, even if XCH_MODE was lost.
+        _puebloActive=YES; _html=closing;
         return YES;
     }
     // XCH_GRAPH is a Pueblo display control, not an image with a missing URL.
@@ -223,6 +224,18 @@ static NSDictionary *RDTag(NSString *token) {
     }
     NSMutableAttributedString *source=[[_pending mutableCopy] autorelease]; [source appendAttributedString:input]; [_pending deleteCharactersInRange:NSMakeRange(0,_pending.length)];
     NSMutableAttributedString *out=[[[NSMutableAttributedString alloc] initWithString:@""] autorelease]; NSString *s=source.string;
+    if (_puebloEnabled && _replied && !_puebloActive && !_mxpActive) {
+        // Some sessions miss the initial XCH_MODE announcement. Recover only
+        // after the advertised Pueblo greeting and our handshake reply, upon
+        // a complete line-ending BR. Never guess from links or image URLs,
+        // override an explicit literal mode, or affect a plain-text connection.
+        static NSRegularExpression *recoveryBreak;
+        static dispatch_once_t once;
+        dispatch_once(&once,^{ recoveryBreak=[[NSRegularExpression alloc] initWithPattern:@"<br[\\t ]*/?[\\t ]*>[\\t ]*(?:\\r?\\n|$)" options:NSRegularExpressionCaseInsensitive error:NULL]; });
+        if ([recoveryBreak firstMatchInString:s options:0 range:NSMakeRange(0,s.length)]) {
+            _puebloActive=YES; _html=YES;
+        }
+    }
     NSUInteger i=0;
     while (i<s.length) {
         unichar c=[s characterAtIndex:i]; NSDictionary *base=[source attributesAtIndex:i effectiveRange:NULL];

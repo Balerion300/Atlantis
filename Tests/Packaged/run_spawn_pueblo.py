@@ -1,9 +1,10 @@
-import os,subprocess,json
+import os,subprocess,json,sys
 from pathlib import Path
 root=Path('diagnostic').resolve();out=root/'results';out.mkdir(exist_ok=True)
 env=dict(os.environ,ATLANTIS_SPAWN_DIR=str(out),DYLD_INSERT_LIBRARIES=str(root/'SpawnPuebloProbe.dylib'))
 with (out/'app.log').open('w') as log:
-    p=subprocess.Popen([str(root/'release/Atlantis.app/Contents/MacOS/Atlantis')],env=env,stdout=log,stderr=log)
+    app=Path(sys.argv[1]).resolve() if len(sys.argv)>1 else root/'release/Atlantis.app'
+    p=subprocess.Popen([str(app/'Contents/MacOS/Atlantis')],env=env,stdout=log,stderr=log)
     try:code=p.wait(timeout=30)
     except subprocess.TimeoutExpired:p.kill();p.wait();raise
 if code:raise RuntimeError(f'Native probe exited {code}')
@@ -26,4 +27,11 @@ row=doc['results'][7]
 assert '<BR>' not in ''.join(row['one'].values()),row
 assert '<BR>' not in ''.join(row['two'].values()),row
 assert 'One still & parsed' in ''.join(row['one'].values()),row
+row=doc['results'][8]
+missing=''.join(row['output'].values())
+if '--recovered' in sys.argv:
+    assert '<BR>' not in missing and '&amp;' not in missing,row
+    assert 'Description & details.' in missing,row
+    assert 'Test channel & text.' in row['output'].get('Staff',''),row
+else:assert '<BR>' in missing and '&amp;' in missing,row
 print('PASS: settings, spawn refresh and concurrent-character isolation checks')
